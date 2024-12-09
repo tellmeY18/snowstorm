@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstorm.core.data.domain.ConceptMini;
+import org.snomed.snowstorm.core.data.domain.Concepts;
 import org.snomed.snowstorm.core.data.domain.QueryConcept;
 import org.snomed.snowstorm.core.data.domain.ReferenceSetMember;
 import org.snomed.snowstorm.core.data.services.ConceptService;
@@ -58,6 +59,8 @@ public class FHIRValueSetService {
 
 	private static final PageRequest PAGE_OF_ONE = PageRequest.of(0, 1);
 
+	private static List<Long> defaultSearchDescTypeIds = List.of(Concepts.FSN_L, Concepts.SYNONYM_L);
+
 	@Autowired
 	private FHIRCodeSystemService codeSystemService;
 
@@ -77,7 +80,7 @@ public class FHIRValueSetService {
 	private ConceptService snomedConceptService;
 
 	@Autowired
-	private ElasticsearchOperations elasticsearchTemplate;
+	private ElasticsearchOperations elasticsearchOperations;
 
 	private final Map<String, Set<String>> codeSystemVersionToRefsetsWithMembersCache = new HashMap<>();
 
@@ -88,7 +91,7 @@ public class FHIRValueSetService {
 				.withPageable(pageable)
 				.build();
 		searchQuery.setTrackTotalHits(true);
-		SearchHits<FHIRValueSet> search = elasticsearchTemplate.search(searchQuery, FHIRValueSet.class);
+		SearchHits<FHIRValueSet> search = elasticsearchOperations.search(searchQuery, FHIRValueSet.class);
 		return toPage(search, pageable);
 	}
 
@@ -502,7 +505,8 @@ public class FHIRValueSetService {
 		}
 		if (filter != null) {
 			conceptQuery.descriptionCriteria(descriptionCriteria -> {
-				descriptionCriteria.term(filter);
+				descriptionCriteria.term(filter)
+									.type(defaultSearchDescTypeIds);
 				if (!orEmpty(languageDialects).isEmpty()) {
 					descriptionCriteria.searchLanguageCodes(languageDialects.stream().map(LanguageDialect::getLanguageCode).collect(Collectors.toSet()));
 				}
