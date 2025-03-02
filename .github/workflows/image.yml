@@ -2,43 +2,42 @@ name: Deploy
 
 on:
   push:
-    branches: [ containerised ]
+    branches:
+      - containerised
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository code
+      # Check out the repository on the containerised branch
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: containerised
 
-      # Set up the JDK (Java 11 in this example; adjust as needed)
-      - name: Set up JDK 11
+      # Set up JDK 17 and enable Maven caching
+      - name: Set up JDK 17 and Maven
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
 
-      # Cache Maven dependencies to speed up builds
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+      # Ensure unzip is available (usually pre-installed on ubuntu-latest but added for clarity)
+      - name: Install unzip if needed
+        run: sudo apt-get update && sudo apt-get install -y unzip
 
-      # Build the project and run tests
-      - name: Build and test
-        run: mvn clean install
+      # Download and configure the Jib CLI (v0.13.0)
+      - name: Setup Jib CLI
+        run: |
+          mkdir -p jib
+          cd jib
+          wget https://github.com/GoogleContainerTools/jib/releases/download/v0.13.0-cli/jib-jre-0.13.0.zip
+          unzip jib-jre-0.13.0.zip
+          # Append the Jib CLI binary directory to the PATH for subsequent steps
+          echo "$(pwd)/jib-0.13.0/bin" >> $GITHUB_PATH
 
-      # Build the Docker image (assumes a Dockerfile exists in the repository root)
-      - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/snowstorm:latest .
-
-      # Log in to GitHub Container Registry using a secret token
-      - name: Log in to GitHub Container Registry
-        run: echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      # Push the Docker image to GHCR
-      - name: Push Docker image to GHCR
-        run: docker push ghcr.io/${{ github.repository_owner }}/snowstorm:latest
+      # Build the Docker image using Maven and the Jib plugin with the docker-amd64 profile
+      - name: Build Docker image with Jib
+        run: mvn compile jib:dockerBuild -P docker-amd64
