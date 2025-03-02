@@ -26,8 +26,8 @@
 		<docker.image.prefix>snomedinternational</docker.image.prefix>
 		<docker.image.tag>latest</docker.image.tag>
 		<docker.base-image>amazoncorretto:17</docker.base-image>
+		<docker.additional-tags>ghcr.io/tellmey18/snowstorm:latest</docker.additional-tags>
 	</properties>
-
 	<dependencies>
 		<!-- BOM Override -->
 		<dependency>
