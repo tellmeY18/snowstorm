@@ -42,6 +42,10 @@ jobs:
       - name: Build Docker image with Jib
         run: mvn compile jib:dockerBuild -P docker-amd64
 
+      # Tag Docker image for GHCR
+      - name: Tag Docker image for GHCR
+        run: docker tag snowstorm:latest ghcr.io/tellmey18/snowstorm:latest
+
       # Log in to GitHub Container Registry using the GHCR token
       - name: Log in to GitHub Container Registry
         run: echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
